@@ -1,7 +1,7 @@
 URL,Title,Author,Year Published,Provider,Views,Genre
-https://www.gutenberg.org/files/36/36-0.txt,The War of the Worlds,H.G. Wells,1897,Project Gutenberg,0,Sci-Fi
-https://www.gutenberg.org/files/120/120-0.txt,Treasure Island,Robert Louis Stevenson,1883,Project Gutenberg,0,Fantasy
-https://www.gutenberg.org/files/30123/30123.txt,Micromegas,Voltaire,1852,Project Gutenburg,0,Sci-Fi
-https://www.gutenberg.org/files/1065/1065-0.txt,The Raven,Edgar Allen Poe,1845,Project Gutenberg,0,Horror
-https://www.gutenberg.org/files/51171/51171.txt,A little Journey,Ray Bradbury,1951,Project Gutenberg,0,Sci-Fi
+https://raw.githubusercontent.com/colbychambers25/immersive-ebook/txt-file-books/The_War_of_the_Worlds,The War of the Worlds,H.G. Wells,1897,Project Gutenberg,0,Sci-Fi
+https://raw.githubusercontent.com/colbychambers25/immersive-ebook/txt-file-books/Treasure_island,Treasure Island,Robert Louis Stevenson,1883,Project Gutenberg,0,Fantasy
+https://raw.githubusercontent.com/colbychambers25/immersive-ebook/txt-file-books/Micromegas,Micromegas,Voltaire,1852,Project Gutenburg,0,Sci-Fi
+https://raw.githubusercontent.com/colbychambers25/immersive-ebook/txt-file-books/the_raven,The Raven,Edgar Allen Poe,1845,Project Gutenberg,0,Horror
+https://www.gutenberg.org/files/51171/51171.txt,A Little Journey,Ray Bradbury,1951,Project Gutenberg,0,Sci-Fi
 https://raw.githubusercontent.com/colbychambers25/immersive-ebook/main/drifting_towards_purpose.txt,Drifting Towards Purpose,Colby Chambers,2020,github,0,Sci-Fi
