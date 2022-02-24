@@ -30,6 +30,7 @@ from sys import version_info
 import pygame
 
 pygame.mixer.init()
+
 url='https://raw.githubusercontent.com/colbychambers25/immersive-ebook/main/Domain_Free_eBook.csv'
 book_library = pd.read_csv(url) #print to see what the panda looks like
 #print(book_library)
@@ -188,6 +189,7 @@ def split_function(story):
         i+=1
         n+=1
     return new_story
+
 
 def main():
     ''' 
