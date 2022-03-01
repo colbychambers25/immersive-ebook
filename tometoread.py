@@ -2,22 +2,13 @@
 TITLE: Tome To Read
 AUTHORS: ...
 DESCRIPTION: So far this is the ereader. Right now we need a function to prep pre uploaded files, but
-                for now this function works on all but The Raven and A Little Journey.
+                for now this function works on all but Little Journey.
+                Audio works for all files, but is currently only one song for each one throughout the story.
 NOTES: 1. There are some imports that im not sure are doing anything.
         2. Main is way to long. I think i need a fuction for our buttons. -- Function made by Colby for buttons
         3. Text files work way better for formatting in Tkinter. 
         4. We need a function that reads .txt files and adds "---split---" between pages.
-ISSUES:
-    1. Figure out a way for pdf reading to be processed much easier:
-        Potential solutions: 
-        1. Convert the pdf files into txt files and add ---split--- between pages 
-        2. Take in only txt files, add ---split--- between pages 
-            (if a txt file is uploaded without the indicator, how can we determine whats a new page?)
-    2. Figure out how to process mp3 files to be played in the background
-    3. Figure out how to link the pages between each other, either through multiple files or through multiple
-        functions within the main file.
-    4. Pack things into functions, ideally we don't want our main function to be unnecessarily long.
-    5. .... add more issues as we progress
+       
 '''
 from curses import window
 from tkinter import *
@@ -36,6 +27,7 @@ book_library = pd.read_csv(url) #print to see what the panda looks like
 #print(book_library)
 url= 'https://raw.githubusercontent.com/colbychambers25/immersive-ebook/page_audio_map/Sound_audio_map.csv'
 audio_map = pd.read_csv(url)
+prev_song = ['none']
 
 def get_from_library(target_url):
     '''
@@ -48,7 +40,7 @@ def get_from_library(target_url):
 def music(n,song):
     if n == 1:
         pygame.mixer.music.load('ereadmp3/'+song)
-        pygame.mixer.music.play(loops=30)
+        pygame.mixer.music.play(loops=3000)
     else:
         i = 'do nothing'
 
@@ -56,13 +48,19 @@ def music_player(window,title):
     #if title != 'continue':
      #   music(0,title)
      #   return
-    song = audio_map[title].iloc[(window.counter)]
+    if window.counter >= len(audio_map[title]):
+        song = prev_song[0]
+    else:
+        song = audio_map[title].iloc[(window.counter)]
     print(song)
     if window.counter == 0:
+        prev_song[0] = song
         music(1,song)
-    elif song != audio_map[title].iloc[(window.counter)-1]:
+    elif song != prev_song[0] and window.counter != 0:
+        prev_song[0] = song
         music(1,song)
     else:
+        prev_song[0] = song
         music(0,song)
 
 def diction():
@@ -124,6 +122,7 @@ def thanks(window):
     canvas.place(relx=.5, rely=.5, anchor=CENTER)
     canvas.config(highlightthickness=0)
     text = canvas.create_text(300, 400, text="Thank you For Reading", fill="black", font=('Times 25'),width=430)
+    text = canvas.create_text(300, 550, text="Music by Eric Matyas\nwww.soundimage.org", fill="black", font=('Times 18'),width=430)
 
 
 def welcome_screen():
