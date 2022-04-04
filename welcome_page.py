@@ -1,4 +1,5 @@
-Tome To Read
+'''
+TITLE: Tome To Read
 AUTHORS: James Thomason, Colby Chambers, Sarah Valine, and Cole Dryer
 DESCRIPTION: So far this is the welcome page. Probably will integrate most things from this file into the main file. \
             However, this is just the skeleton for the main page that displays the Logo as well as a welcome.
@@ -240,7 +241,7 @@ class upload_page(tk.Frame):
         back_arrow = customtkinter.CTkButton(
         upload_header,
         width=50,
-        height=30,
+        height=50,
         border_width=0,
         corner_radius=2,
         image=back_arrow_img,
@@ -302,7 +303,7 @@ class settings_page(tk.Frame):
         back_arrow = customtkinter.CTkButton(
         settings_header,
         width=50,
-        height=30,
+        height=50,
         border_width=0,
         corner_radius=2,
         image=back_arrow_img,
@@ -349,32 +350,48 @@ class library_page(tk.Frame):
     def __init__(self,parent, controller):
         tk.Frame.__init__(self,parent)
         # Top portion of the settings page
-        library_header = Frame(self, width= 14000, height=100, bg="white")
-        library_header.grid(columnspan=3,rowspan=2,row=0)
-        library_label = Label(self, text = "Library", font = ("Raleway", 32), fg="black", bg="white")
-        library_label.place(relx=.5,y=50,anchor=CENTER)
-        # Placing button into the top section of settings page
+        settings_header = Frame(self, bg="white", width=1200,height=100)
+        settings_label = Label(settings_header, text = "Library", font = ("Raleway", 32), fg="black", bg="white")
+        settings_label.pack(anchor=CENTER,fill="none",expand=False)
+        settings_label.place(relx=.5,y=50,anchor=CENTER)
         back_arrow_img = PhotoImage(file="ereadpngs/chevron-left.png")
         back_arrow_img = back_arrow_img.subsample(15)
-        
-        
+
         back_arrow = customtkinter.CTkButton(
-        library_header,
+        settings_header,
         width=50,
-        height=30,
+        height=50,
         border_width=0,
         corner_radius=2,
         image=back_arrow_img,
         text = '',
         command= lambda: controller.show_frame(main_menu)
         )
-        back_arrow.pack(side="left")
-        back_arrow.place(x=50, y= 50, anchor=W)
-    
-        #my_str = tk.StringVar(self)
-        #root = Tk()
+        back_arrow.pack(side=LEFT,expand=False,pady=25,padx=25)
+        settings_header.pack(fill=BOTH)
         
-        #scrollbar.pack( side = RIGHT, fill = Y )
+        # Creating the canvas
+        scrollable_canvas = Canvas(self)
+        scrollable_canvas.config(width=950, height = 4000)
+        scrollable_canvas.place(relx=.5)
+        scrollable_canvas.pack(side=LEFT,fill="y",expand=1)
+
+        # Creating a scrollbar
+        library_scrollbar = Scrollbar(self, orient = VERTICAL, command = scrollable_canvas.yview)
+        library_scrollbar.pack(side = RIGHT, fill = Y)
+
+        # Configuring Canvas with scrollbar
+        scrollable_canvas.configure(yscrollcommand=library_scrollbar.set)
+
+        # Binding configure
+        scrollable_canvas.bind('<Configure>', lambda e: scrollable_canvas.configure(scrollregion = scrollable_canvas.bbox("all")))
+
+        # Creating another frame inside canvas
+        canvas_frame = Frame(scrollable_canvas)
+
+        # adding new frame to window in canvas
+        scrollable_canvas.create_window((0,125), window=canvas_frame, anchor="nw")
+
         def action(item):
             temp = book_library.loc[book_library['Title'] == item]
             #temp['Cover'].item()
@@ -384,18 +401,64 @@ class library_page(tk.Frame):
             #logo_label = Label(image=logo)
             #logo_label.image = logo
             #logo_label.place(relx=.5, rely=.5, anchor= CENTER)
-            return customtkinter.CTkButton(self, width=200,height=300,border_width=2, 
+            
+            return customtkinter.CTkButton(canvas_frame, width=200,height=300,border_width=2, 
             corner_radius=8,image = logo, text = '',command = lambda: func(item), fg_color = "gray"
-            ), customtkinter.CTkLabel(self, width=200, height=20,text=item, text_font= ("Railway",12))
+            )
+        def name(item):
+            return customtkinter.CTkLabel(canvas_frame, width=196, height=30,text=item, text_font= ("Railway",12),corner_radius=0,fg_color='gray')
 
         def func(item):
-            create_book(item,'on','',self)
+            create_book(item,'on','',scrollable_canvas)
+
+        rows = 0
+        columns = 0
+        col_adv = 0
+        for i, item  in enumerate(book_library['Title']):
+            b = action(item)
+            c = name(item)
+            #create_book(item,'on','',tk.Frame)
+            #btn2.pack(side="right")
+            # if line % 5 == 0:
+            
+            # First 3 buttons should be placed in (0,0),(0,1),(0,2)
+            b.grid(row = rows, column = columns, padx = 20, pady = 10)
+
+            c.grid(row = rows, column = columns)
+            # Then condition hits and then the next set of buttons should be placed in 
+            # (1,0),(1,1),(1,2), and so forth for every 3 or 4 buttons
+            print("("+str(rows)+","+str(columns)+")")
+            if columns % 3 == 0 and columns > 0:
+                rows += 1
+                columns=-1
+            if columns != 3:
+                columns+=1
+                
+
+
+        '''
+        ****please do not delete we may need later****
+        def action(item):
+            temp = book_library.loc[book_library['Title'] == item]
+            #temp['Cover'].item()
+            logo = Image.open(temp['Cover'].item())
+            logo = logo.resize((170,280))
+            logo = ImageTk.PhotoImage(logo)
+            #logo_label = Label(image=logo)
+            #logo_label.image = logo
+            #logo_label.place(relx=.5, rely=.5, anchor= CENTER)
+            return customtkinter.CTkButton(canvas_frame, width=200,height=300,border_width=2, 
+            corner_radius=8,image = logo, text = '',command = lambda: func(item), fg_color = "gray"
+            ), customtkinter.CTkLabel(canvas_frame, width=200, height=20,text=item, text_font= ("Railway",12))
+
+        def func(item):
+            create_book(item,'on','green',self)
         lib = []
 
-        def buttons(n):
+        def buttons():
             i=0
             x1 = -350
-            y1 = -130
+            y1 = 200
             line = 1
             
             for item in book_library['Title']:
@@ -403,13 +466,13 @@ class library_page(tk.Frame):
                 #create_book(item,'on','',tk.Frame)
                 #btn2.pack(side="right")
                 if line % 4 == 0:
-                    b.place(relx=.5, rely=.5,x=x1,y=y1, anchor=CENTER)
-                    book_title.place(relx=.5, rely=.5,x=x1,y=y1+160, anchor=CENTER)
+                    b.place(relx=.5,x=x1,y=y1, anchor=CENTER)
+                    book_title.place(relx=.5,x=x1,y=y1+160, anchor=CENTER)
                     #book_title.pack(self)
                     y1+=340
                     x1= -350
                 else:
-                    b.place(relx=.5, rely=.5,x=x1,y=y1, anchor=CENTER)
+                    b.place(relx=.5,x=x1,y=y1, anchor=CENTER)
                     book_title.place(relx=.5, rely=.5,x=x1,y=y1+160, anchor=CENTER)
                     #book_title.pack(self)
                     x1+=230
@@ -417,12 +480,9 @@ class library_page(tk.Frame):
                 i+=1
                 #lib.append[b]
             # x1+=230
+        buttons()
         
-
-
-        library_page_tracker = 8
-        buttons(library_page_tracker)
-
+        '''
         '''
         library_page_tracker+=8
         next_page = customtkinter.CTkButton(self, width=40,height=40,border_width=2, 
