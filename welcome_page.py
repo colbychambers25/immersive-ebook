@@ -26,6 +26,8 @@ url='https://raw.githubusercontent.com/colbychambers25/immersive-ebook/main/Doma
 book_library = pd.read_csv(url) #print to see what the panda looks like
 url= 'https://raw.githubusercontent.com/colbychambers25/immersive-ebook/page_audio_map/Sound_audio_map.csv'
 audio_map = pd.read_csv(url)
+url= 'https://raw.githubusercontent.com/colbychambers25/immersive-ebook/page_audio_map/soundeffects_map.csv'
+sound_effects_map = pd.read_csv(url)
 prev_song = ['none']
 library_map = {}
 volume=50
@@ -646,64 +648,7 @@ class library_page(tk.Frame):
                 columns+=1
 
     def refresh_library(self):
-        self.render_books()
-
-
-        '''
-        ****please do not delete we may need later****
-        def action(item):
-            temp = book_library.loc[book_library['Title'] == item]
-            #temp['Cover'].item()
-            logo = Image.open(temp['Cover'].item())
-            logo = logo.resize((170,280))
-            logo = ImageTk.PhotoImage(logo)
-            #logo_label = Label(image=logo)
-            #logo_label.image = logo
-            #logo_label.place(relx=.5, rely=.5, anchor= CENTER)
-            return customtkinter.CTkButton(canvas_frame, width=200,height=300,border_width=2, 
-            corner_radius=8,image = logo, text = '',command = lambda: func(item), fg_color = "gray"
-            ), customtkinter.CTkLabel(canvas_frame, width=200, height=20,text=item, text_font= ("Railway",12))
-        def func(item):
-            create_book(item,'on','green',self)
-        lib = []
-        def buttons():
-            i=0
-            x1 = -350
-            y1 = 200
-            line = 1
-            
-            for item in book_library['Title']:
-                b,book_title = action(item)
-                #create_book(item,'on','',tk.Frame)
-                #btn2.pack(side="right")
-                if line % 4 == 0:
-                    b.place(relx=.5,x=x1,y=y1, anchor=CENTER)
-                    book_title.place(relx=.5,x=x1,y=y1+160, anchor=CENTER)
-                    #book_title.pack(self)
-                    y1+=340
-                    x1= -350
-                else:
-                    b.place(relx=.5,x=x1,y=y1, anchor=CENTER)
-                    book_title.place(relx=.5, rely=.5,x=x1,y=y1+160, anchor=CENTER)
-                    #book_title.pack(self)
-                    x1+=230
-                line+=1
-                i+=1
-                #lib.append[b]
-            # x1+=230
-        buttons()
-        
-        '''
-        '''
-        library_page_tracker+=8
-        next_page = customtkinter.CTkButton(self, width=40,height=40,border_width=2, 
-            corner_radius=8,text='>',text_color='black', command = lambda: buttons(library_page_tracker)
-            )
-        next_page.place(rely = .5 , relx = .9)
-        '''
-        
-        
-
+        self.render_books() 
 
 class Book:
     def __init__(self,book_title, sound,theme,window):
@@ -768,6 +713,16 @@ class Book:
         else:
             i = 'do nothing'
 
+    def sound_effects(self,n,sound):
+        if n == 1:
+            pygame.mixer.music.load('ereadSounds/'+sound)
+            pygame.mixer.music.play(loops=0)
+        elif self.status == "paused":
+            pygame.mixer.music.unpause()
+        else:
+            i = 'do nothing'
+
+
     def music_player(self,window,title):
         #if title != 'continue':
         #   music(0,title)
@@ -779,6 +734,10 @@ class Book:
                 song = audio_map[title].iloc[(window.counter)]
         else:
             song = audio_map["The Raven"][1]
+            
+        if title in sound_effects_map.columns and window.counter < len(sound_effects_map[title]) and  sound_effects_map[title].iloc[(window.counter)] != 'None':
+            print(sound_effects_map[title].iloc[(window.counter)])
+            self.sound_effects(1,sound_effects_map[title].iloc[(window.counter)])
         print(song)
         if self.sound == 'off':
             #do nothing
@@ -841,7 +800,9 @@ class Book:
         canvas = Canvas(bg="dark gray", width=595, height=770)
         canvas.place(relx=.5, rely=.5,x=-60,anchor=CENTER)
         canvas.config(highlightthickness=0)
-        text = canvas.create_text(30, 20, text=str(window.counter)+'/'+str(pages_total) if moderator == False else self.thanks(), fill="black", font=('Times 17'),width=510, )
+        self.music_information(window)
+        self.information(pages_total)
+        text = canvas.create_text(30, 20, text=str(window.counter) if moderator == False else self.thanks(), fill="black", font=('Times 17'),width=510, )
         text = canvas.create_text(300, 400, text=final_pages[window.counter] if moderator == False else self.thanks(), fill="black", font=('Times 17'),width=530, )
 
     def thanks(self):
@@ -856,21 +817,29 @@ class Book:
         text = canvas.create_text(300, 550, text="Music by Eric Matyas\nwww.soundimage.org", fill="black", font=('Times 18'),width=430)
 
 
-    def information(self):
+    def information(self,pages_total):
         '''
         Information on book
         '''
         temp = book_library.loc[book_library['Title'] == self.book_title]
         #temp['Cover'].item()
-        canvas = customtkinter.CTkLabel(width=225, height=500,text="Title:\n"+self.book_title+"\n\nAuthor:\n"+temp['Author'].item()+"\n\nYear:\n"+ str(temp['Year Published'].item())+"\n\nGenre:\n"+str(temp['Genre'].item())+"\n", text_font= ("Railway",14))
+        canvas = customtkinter.CTkLabel(width=225, height=500,text="Title:\n"+self.book_title+"\n\nAuthor:\n"+temp['Author'].item()+"\n\nYear:\n"+ str(temp['Year Published'].item())+"\n\nGenre:\n"+str(temp['Genre'].item())+"\n\n"+"Page Count: \n"+str(pages_total), text_font= ("Railway",14))
         canvas.place(relx=.5, rely=.5,x=465,y=-100, anchor=CENTER)
         canvas.config(highlightthickness=0)
 
-    def music_information(self):
+    def music_information(self,window):
         '''
         Information on song
         '''
-        canvas = customtkinter.CTkLabel(width=250, height=80,text="Song Title:\nExample -By: Example")
+        title = self.book_title
+        if title in audio_map:
+            if window.counter >= len(audio_map[title]):
+                song = prev_song[0]
+            else:
+                song = audio_map[title].iloc[(window.counter)]
+        else:
+            song = audio_map["The Raven"][1]
+        canvas = customtkinter.CTkLabel(width=280, height=80,text="Song Title: "+song+"\nBy: Eric Matyas\nwww.soundimage.org")
         canvas.place(relx=.5, rely=.5,x=410,y=230, anchor=CENTER)
         canvas.config(highlightthickness=0)
 
@@ -879,8 +848,8 @@ class Book:
         frame_4.place(rely=.5, anchor=W)
         frame_4.configure(fg_color=("lightgray"))
         self.library_button(frame_4)
-        self.find_button(frame_4)
-        self.settings_button(frame_4)
+        self.find_button(frame_4,window)
+        self.settings_button(frame_4,window)
         self.upload_button(frame_4)
         frame_4.tkraise()
     
@@ -888,37 +857,62 @@ class Book:
         python = sys.executable
         os.execl(python, python, * sys.argv)
 
-    def finder(self):
-        python = sys.executable
-        os.execl(python, python, * sys.argv)
+    def finder(self,window):
+        self.page_name = tk.IntVar()
+        title_entry = Entry(window,width=3, textvariable= self.page_name)
+        directions = Label(text="Select the next page\nto jump.", font=("Raleway",10))
+        title_entry.pack(side="right")
+        title_entry.place(relx=.5, rely=.5,x= -480, y=-180, anchor=CENTER)
+        directions.place(relx=.5, rely=.5,x= -450, y=-210, anchor=CENTER)
+        btn = customtkinter.CTkButton(width=40,height=20,border_width=2,fg_color=("white", "lightgray"),
+        corner_radius=8,text = 'Search',text_color='black',
+        command = lambda: self.page_jump(title_entry,window) 
+        )
+        btn.place(relx=.5, rely=.5,x= -420, y=-180, anchor=CENTER)
+        print(title_entry.get())
+        #window.counter = int(title_entry.get())
 
-    def settings_link(self):
-        python = sys.executable
-        os.execl(python, python, * sys.argv)
+    def page_jump(self, val, window):
+        window.counter = int(val.get())-1
+
+    def settings_link(self,window):
+        df = pd.read_csv('ereadbookmarks/bookmarks.csv')
+        if self.book_title in df.columns:
+            directions2 = Label(text="You left off on page "+str(df.iloc[0][self.book_title].item())+'.', font=("Raleway",10))
+            directions2.place(relx=.5, rely=.5,x= -440, y=60, anchor=CENTER)
+        df[self.book_title] = window.counter
+        #df = df.to_csv(index=False)
+        #os.makedirs('/ereadbookmarks', exist_ok=True)  
+        df.to_csv('ereadbookmarks/bookmarks.csv') 
+        
+        directions1 = Label(text="Page "+str(df.iloc[0][self.book_title].item())+" Bookmarked!", font=("Raleway",10))
+        directions1.place(relx=.5, rely=.5,x= -440, y=80, anchor=CENTER)
+
+
         
     def upload_link(self):
-        python = sys.executable
-        os.execl(python, python, * sys.argv)
+        exit()
 
-    def find_button(self,frame):
+    def find_button(self,frame,window):
         photo = PhotoImage(file = 'ereadpngs/book-research.png')
         btn2 = customtkinter.CTkButton(master = frame, width=200,height=80,border_width=2,fg_color=("white", "lightgray"),
         corner_radius=8,text = '',image = photo,text_color='black',
-        command = lambda: self.finder()
+        command = lambda: self.finder(window)
         )
         btn2.pack(side="right")
         btn2.place(relx=.5, rely=.5,y=-180, anchor=CENTER)
 
     def library_button(self,frame):
-        photo = PhotoImage(file = 'ereadpngs/binder-file.png')
+        photo = PhotoImage(file = 'ereadpngs/home.png')
         btn2 = customtkinter.CTkButton(master = frame,width=200,height=80,border_width=2,fg_color=("white", "lightgray"),
         corner_radius=8,text = '',image = photo,text_color='black',
         command = lambda: self.library_return()
         )
         btn2.pack(side="right")
         btn2.place(relx=.5, rely=.5,y=-60, anchor=CENTER)
+
     def upload_button(self,frame):
-        photo = PhotoImage(file = 'ereadpngs/cloud-upload.png')
+        photo = PhotoImage(file = 'ereadpngs/exit.png')
         btn2 = customtkinter.CTkButton(master = frame,width=200,height=80,border_width=2,fg_color=("white", "lightgray"),
         corner_radius=8,text = '',image = photo,text_color='black',
         command = lambda: self.upload_link()
@@ -926,11 +920,11 @@ class Book:
         btn2.pack(side="right")
         btn2.place(relx=.5, rely=.5,y=180, anchor=CENTER)
 
-    def settings_button(self,frame):
-        photo = PhotoImage(file = 'ereadpngs/settings-gear.png')
+    def settings_button(self,frame,window):
+        photo = PhotoImage(file = 'ereadpngs/bookmark.png')
         btn2 = customtkinter.CTkButton(master = frame,width=200,height=80,border_width=2,fg_color=("white", "lightgray"),
         corner_radius=8,text = '',image = photo,text_color='black',
-        command = lambda: self.settings_link()
+        command = lambda: self.settings_link(window)
         )
         btn2.pack(side="right")
         btn2.place(relx=.5, rely=.5,y=60, anchor=CENTER)
@@ -990,6 +984,22 @@ class Book:
 
     def split_function(self,story):
         story = story.splitlines(True)
+        if len(story[1]) > 20:
+            print('got it')
+            new_story = ''
+            i = 0
+            n=0
+            for line in story:
+                i = 0
+                for word in line.split(' '):
+                    if i == 11:
+                        new_story += '\n'
+                        i=0
+                    else:
+                        new_story+=word+' '
+                    i+=1
+            story = new_story.splitlines()
+
         new_story = ''
         i = 0
         n=0
@@ -1006,6 +1016,7 @@ class Book:
                 new_story+=line.strip('\n')
             i+=1
             n+=1
+
         return new_story
 
     def main(self):
@@ -1044,8 +1055,6 @@ class Book:
         logo_label.place(relx=.5, rely=.5, anchor= CENTER)
         #canvas.create_text(300, 400, text="Good Luck On Your Fictional Journey!", fill="white", font=('Times 25'),width=430)
         #canvas.create_text(300, 550, text="Music by Eric Matyas\nwww.soundimage.org", fill="white", font=('Times 10'),width=430)
-        self.information()
-        self.music_information()
         self.menu_bar(window)
         #window.mainloop() #basically refreshes the window
 
