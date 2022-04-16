@@ -890,6 +890,7 @@ class Book:
         '''
         #think of adding mp3 call functions based on page here. 
         #Something like mp3_play(window, window.counter, volume_on == true)
+        channel2.fadeout(5)
         print(self.sound)
         pages_total = len(final_pages)
         if forward_back == "back" and window.counter > 0:
