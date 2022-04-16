@@ -16,6 +16,7 @@ import os
 import os.path
 import time
 import sys
+import pdfplumber
 
 pygame.mixer.init()
 pygame.mixer.music.set_volume(0.5)
@@ -31,37 +32,36 @@ sound_effects_map = pd.read_csv(url)
 prev_song = ['none']
 library_map = {}
 volume=50
+dark_mode = ["dark slate gray", "slate gray", "slate blue", "light slate blue"]
+light_mode = ["color_one", "color_two", "color_three", "color_four"]
+tan_mode = ["color_one", "color_two", "color_three", "color_four"]
+user_settings = { 'font' : "Times", 'theme' : dark_mode }
+
+
+# parse tree or dictionary points to the
 
 class story_file:
     '''
     
     '''
-    def __init__(self):
-        # columns = ['URL','Title','Author','Year Published','Provider','Views','Genre','Cover']
-        self.story = []
+    def __init__(self, book_library):
+        
         self.userStory = []
         
+        # Handling if the user story file already exists within the ereadCSV folder
         if os.path.exists("ereadCSV/tometoread_Stories.csv"):
-            df = pd.read_csv("ereadCSV/tometoread_Stories.csv")
-            self.story = df
-        else:
-            path = "./ereadStories"
-            self.curdir = os.getcwd()
-            os.chdir(path)
-            for file in os.listdir():
-                if not file.startswith("C:"):
-                    self.story.append("ereadStory/" + file)
-                else:
-                    self.userStory.append(file)
-            self.story = self.story + self.userStory
-            os.chdir(self.curdir)
+            df = pd.read_csv("ereadCSV/tometoread_Stories.csv", header=None)
+            self.userStory = df
+            for index, row in self.userStory.iterrows():
+                book_library.loc[len(book_library.index)] = [row[0],row[1],row[2],row[3],row[4],row[5],row[6],row[7]]
+
+    def set_user_story(self):
+        self.userStory = book_library.loc[book_library['Provider'] == "User"]
         
     def save_stories(self):
-
-        pass
-
-    def add_story(self,filename):
-        self.story.append(filename)
+        self.userStory.to_csv("ereadCSV/tometoread_Stories.csv", header=False,index=False)
+        print("Story has been saved to csv file!")
+        
 
 class sounds_file:
     def __init__(self):
@@ -167,6 +167,9 @@ class music_file:
 class tome_to_read(tk.Tk):
     
     def __init__(self, *args, **kwargs):
+        '''pygame.mixer.music.load("main_bg_music.mp3")
+        pygame.mixer.music.set_volume(.05)
+        pygame.mixer.music.play(loops=0)'''
         tk.Tk.__init__(self, *args, **kwargs)
         
         self.container = tk.Frame(self)
@@ -222,6 +225,9 @@ class tome_to_read(tk.Tk):
             # ]
             soundFiles.save_sounds()
 
+    def mute_bg_music(self):
+        pygame.mixer.music.pause()
+        
 class start_page(tk.Frame):
     def __init__(self,parent, controller):
         tk.Frame.__init__(self,parent)
@@ -317,6 +323,17 @@ class main_menu(tk.Frame):
         logo_label.image = logo
         logo_label.place(relx=.5, rely=.3, anchor= CENTER)
 
+        mute_btn = customtkinter.CTkButton(
+            self,
+            width=25,
+            height=25,
+            border_width=0,
+            corner_radius=2,
+            text="Mute Music",
+            command = lambda: controller.mute_bg_music()
+        )
+        mute_btn.place(relx=0,rely=.97)
+
 class upload_page(tk.Frame):
     def __init__(self,parent, controller):
         tk.Frame.__init__(self,parent)
@@ -380,7 +397,7 @@ class upload_page(tk.Frame):
         genre_entry_label = Label(self, text="Genre:", font=("Raleway", 10))
         genre_entry_label.place(relx=.2, rely=.3)
 
-        self.cover_image_path = "check"
+        self.cover_image_path = "None Given"
         self.story_file_path = "fileCheck"
 
         cover_image_upload = customtkinter.CTkButton(
@@ -448,6 +465,17 @@ class upload_page(tk.Frame):
         for i,song in enumerate(soundFiles.sounds):
             soundlistbox.insert(i,song)
 
+        mute_btn = customtkinter.CTkButton(
+            self,
+            width=25,
+            height=25,
+            border_width=0,
+            corner_radius=2,
+            text="Mute Music",
+            command = lambda: controller.mute_bg_music()
+        )
+        mute_btn.place(relx=0,rely=.97)
+
     def upload_book_cover(self):
         book_cover = askopenfilename(filetypes=[('image files','.png'),('image files','.jpg')])
 
@@ -465,23 +493,29 @@ class upload_page(tk.Frame):
             story_success.place(relx=.27,rely=.455)
             print(f'New Story is: {self.story_file_path}')
     
-    def submit_story(self,book_path,book_cover="None given"):
-        provider = "User"
-        views = 0
-        print(book_path) 
-        title = self.book_title.get()
-        author = self.author_var.get()
-        year = self.year_pub_var.get()
-        genre = self.genre_var.get()
-        # add new row with information
-        book_library.loc[len(book_library.index)] = [book_path,title,author,year, provider, views, genre, book_cover]
-        story_add_success = Label(self,text="Story has been added!", font=("Raleway",10))
-        story_add_success.place(relx=.2,rely=.58)
-        # make call to update library page with new book
-        print(book_library)
+    def submit_story(self,book_path="fileCheck",book_cover="None Given"):
+        if book_path == "fileCheck":
+            story_add_success_or_fail = Label(self, text="Please upload a story file to add new story.", font=("Raleway", 10), fg="red")
+            story_add_success_or_fail.place(relx=.2,rely=.58)
+        else:
+            if book_cover == "None Given":
+                book_cover = "ereadpngs/tome2.png"
+            provider = "User"
+            views = 0
+            print(book_path) 
+            title = self.book_title.get()
+            author = self.author_var.get()
+            year = self.year_pub_var.get()
+            genre = self.genre_var.get()
+            # add new row with information
+            book_library.loc[len(book_library.index)] = [book_path,title,author,year, provider, views, genre, book_cover]
+            story_add_success_or_fail = Label(self,text="Story has been added!", font=("Raleway",10))
+            story_add_success_or_fail.place(relx=.22,rely=.58)
+            # make call to update library page with new book
+            stories.set_user_story()
+            stories.save_stories()
+            print(book_library)
         
-
-
 class settings_page(tk.Frame):
     def __init__(self,parent, controller):
         tk.Frame.__init__(self,parent)
@@ -542,6 +576,17 @@ class settings_page(tk.Frame):
         fsize_lbl = Label(sec3, text="Font Size:", font = ("Raleway", 12), fg="black", bg="white")
         fsize_lbl.place(relx=.2, rely=.6,anchor=CENTER)
 
+        mute_btn = customtkinter.CTkButton(
+            self,
+            width=25,
+            height=25,
+            border_width=0,
+            corner_radius=2,
+            text="Mute Music",
+            command = lambda: controller.mute_bg_music()
+        )
+        mute_btn.place(relx=0,rely=.97)
+
 class library_page(tk.Frame):
     def __init__(self,parent, controller):
         tk.Frame.__init__(self,parent)
@@ -600,12 +645,28 @@ class library_page(tk.Frame):
 
         # Creating another frame inside canvas
         self.canvas_frame = Frame(self.scrollable_canvas)
+        self.canvas_frame.bind("<Configure>", self.reset_scrollregion)
 
         # adding new frame to window in canvas
         self.scrollable_canvas.create_window((0,125), window=self.canvas_frame, anchor="nw")
 
         # Renders all books into the canvas
+        
         self.render_books()
+
+        mute_btn = customtkinter.CTkButton(
+            self,
+            width=25,
+            height=25,
+            border_width=0,
+            corner_radius=2,
+            text="Mute Music",
+            command = lambda: controller.mute_bg_music()
+        )
+        mute_btn.place(relx=0,rely=.97)
+    
+    def reset_scrollregion(self, event):
+        self.scrollable_canvas.configure(scrollregion=self.scrollable_canvas.bbox("all"))
 
     def action(self, item):
         temp = book_library.loc[book_library['Title'] == item]
@@ -658,24 +719,44 @@ class Book:
         self.sound = sound
         self.theme = theme
         self.status = 'play'
+        self.frame_4_1 =None
+        self.frame_4 = None
+        self.frame_3 = None
+        self.canvas = None
+        self.canvas_2 = None
+        self.canvas_3 = None
+        self.info = None
+        self.music_info = None
+        self.advbutton = None
+        self.backbutton = None
+        self.mute = None
+        self.volup = None
+        self.slider = None
+        self.search_button = None
+        self.search_directions = None
+        self.bookmark1 = None
+        self.bookmark2 = None
         if __name__ == "__main__":
-            self.main()
+            self.main_book_run()
 
     def sound_switch(self,var):
         if var == "off":
             self.sound = var
-            pygame.mixer.music.pause()
+            channel2.pause()
+            channel1.pause()
         elif var == 'on':
             self.sound = var
-            pygame.mixer.music.unpause()
+            channel2.unpause()
+            channel1.unpause()
         return
 
     def sound_switch_button(self):
         photo = PhotoImage(file = 'ereadpngs/mute.png')
-        btn2 = customtkinter.CTkButton( width=45,height=45,border_width=0,
-        corner_radius=8,text = '',image = photo,text_color='black',
+        btn2 = customtkinter.CTkButton( width=45,height=45,border_width=0, 
+        corner_radius=8,text = '',image = photo,text_color='black', fg_color=user_settings["theme"][2],
         command = lambda: self.sound_switch('off')
         )
+        self.mute = btn2
         btn2.pack(side="right")
         btn2.place(relx=.5, rely=.5,y=300,x=270, anchor=CENTER)
         return
@@ -683,9 +764,10 @@ class Book:
     def sound_switch_button2(self):
         photo = PhotoImage(file = 'ereadpngs/volume.png')
         btn2 = customtkinter.CTkButton( width=45,height=45,border_width=0,
-        corner_radius=8,text = '',image = photo,text_color='black',
+        corner_radius=8,text = '',image = photo,text_color='black',fg_color=user_settings["theme"][2],
         command = lambda: self.sound_switch('on')
         )
+        self.volup = btn2
         btn2.pack(side="right")
         btn2.place(relx=.5, rely=.5,y=300,x=550, anchor=CENTER)
         return
@@ -695,30 +777,47 @@ class Book:
         This function finds the url to our database in github.
         '''
         if file_url == "file":
-            response  = open(target_url,'r')
+            response  = open(target_url,encoding="utf-8")
             #read whole file to a string
             data = response.read()
+            
             response.close()   
         else:
             response = requests.get(target_url)
             data = response.text
         return(data)
 
+    def read_user_story(self, file_path): # !IMPORTANT
+        # ask rich if he knows how to process pdf files or txt files. How can we know when there is a next page, especially for pdf files, Important for reading pdf files.
+        # semi works
+        processed = []
+        extracted = []
+        pdf_str = ''
+        if file_path[-4:] == ".pdf":
+            pdf = pdfplumber.open(file_path)
+            for i in range(len(pdf.pages)):
+                processed.append(pdf.pages[i])
+            for page in processed:
+                pdf_str += page.extract_text()
+            return pdf_str
+        
+
     def music(self,n,song):
         if n == 1:
-            pygame.mixer.music.load('ereadmp3/'+song)
-            pygame.mixer.music.play(loops=3000)
+            song = pygame.mixer.Sound('ereadmp3/'+song)
+            channel1.play(song,loops=3000)
         elif self.status == "paused":
-            pygame.mixer.music.unpause()
+            channel1.unpause()
         else:
             i = 'do nothing'
 
     def sound_effects(self,n,sound):
         if n == 1:
-            pygame.mixer.music.load('ereadSounds/'+sound)
-            pygame.mixer.music.play(loops=0)
+            song = pygame.mixer.Sound('ereadSounds/'+sound)
+            song.set_volume(.2)
+            channel2.play(song,loops=0)
         elif self.status == "paused":
-            pygame.mixer.music.unpause()
+            channel2.unpause()
         else:
             i = 'do nothing'
 
@@ -758,7 +857,7 @@ class Book:
         that links the pages of the story with an index number.
         print(diction) will show you what I am referring too.
         '''
-        
+
         diction = {}
         i = 0
         for row in book_library['Title']:
@@ -769,8 +868,11 @@ class Book:
         # The line below is how the book is found in the dictionary. vl
         if book_library['URL'][index][0] == 'h':
             story = self.get_from_library('url',target_url = book_library['URL'][index]) 
-        else:
+        elif book_library['URL'][index][-1] == 't':
             story = self.get_from_library('file',target_url = book_library['URL'][index]) 
+        elif book_library['URL'][index][-1] == 'f':                                                                                                                                                                                                                   
+            story = self.read_user_story(book_library['URL'][index])
+            
         if book != "The Raven":
             story = self.split_function(story)
         else:
@@ -797,24 +899,28 @@ class Book:
         moderator = len(final_pages) <= window.counter
         if moderator == False:
             self.music_player(window,title)
-        canvas = Canvas(bg="dark gray", width=595, height=770)
-        canvas.place(relx=.5, rely=.5,x=-60,anchor=CENTER)
-        canvas.config(highlightthickness=0)
+        if self.canvas_2 != None:
+            self.canvas_2.destroy()
+        self.canvas_2 = Canvas(bg=user_settings["theme"][1], width=595, height=770)
+        self.canvas_2.place(relx=.5, rely=.5,x=-60,anchor=CENTER)
+        self.canvas_2.config(highlightthickness=0)
         self.music_information(window)
         self.information(pages_total)
-        text = canvas.create_text(30, 20, text=str(window.counter) if moderator == False else self.thanks(), fill="black", font=('Times 17'),width=510, )
-        text = canvas.create_text(300, 400, text=final_pages[window.counter] if moderator == False else self.thanks(), fill="black", font=('Times 17'),width=530, )
+        text = self.canvas_2.create_text(30, 20, text=str(window.counter) if moderator == False else self.thanks(), fill="black", font=('Times 16'),width=540, )
+        text = self.canvas_2.create_text(300, 400, text=final_pages[window.counter] if moderator == False else self.thanks(), fill="black", font=('Times 16'),width=540, anchor=CENTER)
 
     def thanks(self):
         '''
         Currently the last page of the book. It just prints thank you.
         '''
         self.music(0,'none')
-        canvas = Canvas(bg="dark gray", width=595, height=770)
-        canvas.place(relx=.5, rely=.5,x=-60, anchor=CENTER)
-        canvas.config(highlightthickness=0)
-        text = canvas.create_text(300, 400, text="Thank you For Reading", fill="black", font=('Times 25'),width=430)
-        text = canvas.create_text(300, 550, text="Music by Eric Matyas\nwww.soundimage.org", fill="black", font=('Times 18'),width=430)
+        if self.canvas_3 != None:
+            self.canvas_3.destroy()
+        self.canvas_3 = Canvas(bg=user_settings["theme"][1], width=595, height=770)
+        self.canvas_3.place(relx=.5, rely=.5,x=-60, anchor=CENTER)
+        self.canvas_3.config(highlightthickness=0)
+        text = self.canvas_3.create_text(300, 400, text="Thank you For Reading", fill="black", font=('Times 25'),width=430)
+        text = self.canvas_3.create_text(300, 550, text="Music by Eric Matyas\nwww.soundimage.org", fill="black", font=('Times 18'),width=430)
 
 
     def information(self,pages_total):
@@ -823,9 +929,11 @@ class Book:
         '''
         temp = book_library.loc[book_library['Title'] == self.book_title]
         #temp['Cover'].item()
-        canvas = customtkinter.CTkLabel(width=225, height=500,text="Title:\n"+self.book_title+"\n\nAuthor:\n"+temp['Author'].item()+"\n\nYear:\n"+ str(temp['Year Published'].item())+"\n\nGenre:\n"+str(temp['Genre'].item())+"\n\n"+"Page Count: \n"+str(pages_total), text_font= ("Railway",14))
-        canvas.place(relx=.5, rely=.5,x=465,y=-100, anchor=CENTER)
-        canvas.config(highlightthickness=0)
+        if self.info!= None:
+            self.info.destroy()
+        self.info = customtkinter.CTkLabel(width=225, height=500,text_color='black',text="Title:\n"+self.book_title+"\n\nAuthor:\n"+temp['Author'].item()+"\n\nYear:\n"+ str(temp['Year Published'].item())+"\n\nGenre:\n"+str(temp['Genre'].item())+"\n\n"+"Page Count: \n"+str(pages_total), text_font= ("Railway",14),fg_color=user_settings["theme"][1])
+        self.info.place(relx=.5, rely=.5,x=465,y=-100, anchor=CENTER)
+        self.info.config(highlightthickness=0,)
 
     def music_information(self,window):
         '''
@@ -839,43 +947,84 @@ class Book:
                 song = audio_map[title].iloc[(window.counter)]
         else:
             song = audio_map["The Raven"][1]
-        canvas = customtkinter.CTkLabel(width=280, height=80,text="Song Title: "+song+"\nBy: Eric Matyas\nwww.soundimage.org")
-        canvas.place(relx=.5, rely=.5,x=410,y=230, anchor=CENTER)
-        canvas.config(highlightthickness=0)
+        if self.music_info != None:
+            self.music_info.destroy()
+        self.music_info = customtkinter.CTkLabel(width=280, height=80,text_color='black',text="Song Title: "+song+"\nBy: Eric Matyas\nwww.soundimage.org",fg_color=user_settings["theme"][1])
+        self.music_info.place(relx=.5, rely=.5,x=410,y=230, anchor=CENTER)
+        self.music_info.config(highlightthickness=0)
 
-    def menu_bar(self,window):
-        frame_4 = customtkinter.CTkFrame(width=80, height=500)
+    def menu_bar(self,window,final_pages):
+        frame_4 = customtkinter.CTkFrame(width=80, height=500,fg_color=user_settings["theme"][1])
         frame_4.place(rely=.5, anchor=W)
-        frame_4.configure(fg_color=("lightgray"))
+        frame_4.configure()
         self.library_button(frame_4)
-        self.find_button(frame_4,window)
+        self.find_button(frame_4,window,final_pages)
         self.settings_button(frame_4,window)
         self.upload_button(frame_4)
         frame_4.tkraise()
+        self.frame_4_1 = frame_4
     
     def library_return(self):
-        python = sys.executable
-        os.execl(python, python, * sys.argv)
+        self.mute.destroy()
+        self.volup.destroy()
+        self.slider.destroy()
+        self.advbutton.destroy()
+        self.backbutton.destroy()
+        self.frame_3.destroy()
+        self.frame_4.destroy()
+        self.canvas.destroy()
+        self.frame_4_1.destroy()
+        if self.canvas_2 != None:
+            self.canvas_2.destroy()
+        if self.info != None:
+            self.info.destroy()
+        if self.music_info != None:
+            self.music_info.destroy()
+        if self.canvas_3 != None:
+            self.canvas_3.destroy()
+        if self.search_button != None:
+            self.search_button.destroy()
+        if self.search_directions != None:
+            self.search_directions.destroy()
+        if self.bookmark1 != None:
+            self.bookmark1.destroy()
+        if self.bookmark2 != None:
+            self.bookmark2.destroy()
+        channel1.stop()
+        channel2.stop()
 
-    def finder(self,window):
+    def finder(self,window,final_pages):
+        if self.search_button != None:
+                self.search_button.destroy()
+        if self.search_directions != None:
+            self.search_directions.destroy()
         self.page_name = tk.IntVar()
         title_entry = Entry(window,width=3, textvariable= self.page_name)
-        directions = Label(text="Select the next page\nto jump.", font=("Raleway",10))
+        directions = Label(text="Select the go button\nto jump.", font=("Raleway",10))
         title_entry.pack(side="right")
         title_entry.place(relx=.5, rely=.5,x= -480, y=-180, anchor=CENTER)
         directions.place(relx=.5, rely=.5,x= -450, y=-210, anchor=CENTER)
-        btn = customtkinter.CTkButton(width=40,height=20,border_width=2,fg_color=("white", "lightgray"),
-        corner_radius=8,text = 'Search',text_color='black',
-        command = lambda: self.page_jump(title_entry,window) 
+        btn = customtkinter.CTkButton(width=40,height=20,border_width=2,fg_color=("white", user_settings["theme"][1]),
+        corner_radius=8,text = 'Go',text_color='black',
+        command = lambda: self.page_jump(title_entry,window,final_pages) 
         )
+        self.search_button = btn
+        self.search_directions= directions
         btn.place(relx=.5, rely=.5,x= -420, y=-180, anchor=CENTER)
         print(title_entry.get())
         #window.counter = int(title_entry.get())
 
-    def page_jump(self, val, window):
+    def page_jump(self, val, window,final_pages):
         window.counter = int(val.get())-1
+        adv = 'adv'
+        self.pages(window,final_pages,adv,self.book_title)
+        
 
     def settings_link(self,window):
+        if self.bookmark1 != None:
+            self.bookmark1.destroy()
+        if self.bookmark2 != None:
+            self.bookmark2.destroy()
         df = pd.read_csv('ereadbookmarks/bookmarks.csv')
         if self.book_title in df.columns:
             directions2 = Label(text="You left off on page "+str(df.iloc[0][self.book_title].item())+'.', font=("Raleway",10))
@@ -887,24 +1036,26 @@ class Book:
         
         directions1 = Label(text="Page "+str(df.iloc[0][self.book_title].item())+" Bookmarked!", font=("Raleway",10))
         directions1.place(relx=.5, rely=.5,x= -440, y=80, anchor=CENTER)
+        self.bookmark2 = directions1
+        self.bookmark1= directions2
 
 
         
     def upload_link(self):
         exit()
 
-    def find_button(self,frame,window):
+    def find_button(self,frame,window,final_pages):
         photo = PhotoImage(file = 'ereadpngs/book-research.png')
-        btn2 = customtkinter.CTkButton(master = frame, width=200,height=80,border_width=2,fg_color=("white", "lightgray"),
+        btn2 = customtkinter.CTkButton(master = frame, width=200,height=80,border_width=2,fg_color=("white", user_settings["theme"][1]),
         corner_radius=8,text = '',image = photo,text_color='black',
-        command = lambda: self.finder(window)
+        command = lambda: self.finder(window,final_pages)
         )
         btn2.pack(side="right")
         btn2.place(relx=.5, rely=.5,y=-180, anchor=CENTER)
 
     def library_button(self,frame):
         photo = PhotoImage(file = 'ereadpngs/home.png')
-        btn2 = customtkinter.CTkButton(master = frame,width=200,height=80,border_width=2,fg_color=("white", "lightgray"),
+        btn2 = customtkinter.CTkButton(master = frame,width=200,height=80,border_width=2,fg_color=("white", user_settings["theme"][1]),
         corner_radius=8,text = '',image = photo,text_color='black',
         command = lambda: self.library_return()
         )
@@ -913,7 +1064,7 @@ class Book:
 
     def upload_button(self,frame):
         photo = PhotoImage(file = 'ereadpngs/exit.png')
-        btn2 = customtkinter.CTkButton(master = frame,width=200,height=80,border_width=2,fg_color=("white", "lightgray"),
+        btn2 = customtkinter.CTkButton(master = frame,width=200,height=80,border_width=2,fg_color=("white", user_settings["theme"][1]),
         corner_radius=8,text = '',image = photo,text_color='black',
         command = lambda: self.upload_link()
         )
@@ -922,7 +1073,7 @@ class Book:
 
     def settings_button(self,frame,window):
         photo = PhotoImage(file = 'ereadpngs/bookmark.png')
-        btn2 = customtkinter.CTkButton(master = frame,width=200,height=80,border_width=2,fg_color=("white", "lightgray"),
+        btn2 = customtkinter.CTkButton(master = frame,width=200,height=80,border_width=2,fg_color=("white", user_settings["theme"][1]),
         corner_radius=8,text = '',image = photo,text_color='black',
         command = lambda: self.settings_link(window)
         )
@@ -934,20 +1085,22 @@ class Book:
         def volume(self):
             val = round(slider.get()/100,1)
             print(val)
-            pygame.mixer.music.set_volume(val)
+            channel1.set_volume(val)
+            channel2.set_volume(val)
             return
+
         slider = customtkinter.CTkSlider(
         width=230,
         height=25,
         border_width=5.5,
         from_=0,
         to=100,
+        fg_color=user_settings["theme"][2],
+        button_color=user_settings["theme"][1],
         command=volume)
+        self.slider = slider
         slider.place(relx=0.5, rely=0.5,x=410,y=300, anchor=CENTER)
         
-        
-    
-
     def adv_button(self,window,final_pages,title):
         photo = PhotoImage(file = 'ereadpngs/chevron-right.png')
         photo = photo.subsample(15)
@@ -960,8 +1113,11 @@ class Book:
         text = '',
         image = photo,
         text_color='black',
+        fg_color=user_settings["theme"][2],
+        border_color="dark slate gray",
         command = lambda: self.pages(window,final_pages,adv,title)
         )
+        self.advbutton = btn2
         btn2.pack(side="right")
         btn2.place(relx=.5, rely=.5,x=290, anchor=CENTER)
 
@@ -974,11 +1130,13 @@ class Book:
         height=80,
         border_width=0,
         corner_radius=8,
+        fg_color=user_settings["theme"][2],
         text = '',
         image = photo,
         text_color='black',
         command = lambda: self.pages(window,final_pages,back,title)
         )
+        self.backbutton = btn2
         btn2.pack(side="right")
         btn2.place(relx=.5, rely=.5,x=-410, anchor=CENTER)
 
@@ -1019,7 +1177,7 @@ class Book:
 
         return new_story
 
-    def main(self):
+    def main_book_run(self):
         ''' 
         Creates the window, and calls this diction function to get a key value pair linked by page number.
         Currently only supports .txt files because pdf files lack the functionality 
@@ -1029,11 +1187,14 @@ class Book:
         frame_3.place(relx=.5, rely=.5, anchor=CENTER)
         frame_3.configure()
         frame_3.tkraise()
+        self.frame_3 = frame_3
         frame_4 = Frame(width=1200, height=800)
         frame_4.place(relx=.5, rely=.5, anchor=CENTER)
         frame_4.configure()
         frame_4.tkraise()
+        #customtkinter.set_default_color_theme("darkblue")
         
+        self.frame_4 = frame_4
         window = frame_4
         window.counter = -1 #this is universal counter funtion that allows a user to traverse a story.
         final_pages, title = self.diction(self.book_title)
@@ -1043,19 +1204,19 @@ class Book:
         self.sound_switch_button()
         self.sound_switch_button2()
         self.music(0,'none')
-        canvas = Canvas(bg="dark gray", width=595, height=770)
-        canvas.place(relx=.5, rely=.5,x=-60, anchor=CENTER)
-        canvas.config(highlightthickness=0)
+        self.canvas = Canvas(bg="dark gray", width=595, height=770)
+        self.canvas.place(relx=.5, rely=.5,x=-60, anchor=CENTER)
+        self.canvas.config(highlightthickness=0)
         temp = book_library.loc[book_library['Title'] == self.book_title]
         logo = Image.open(temp['Cover'].item())
         logo = logo.resize((595,770))
         logo = ImageTk.PhotoImage(logo)
-        logo_label = Label(canvas,image=logo)
+        logo_label = Label(self.canvas,image=logo)
         logo_label.image = logo
         logo_label.place(relx=.5, rely=.5, anchor= CENTER)
         #canvas.create_text(300, 400, text="Good Luck On Your Fictional Journey!", fill="white", font=('Times 25'),width=430)
         #canvas.create_text(300, 550, text="Music by Eric Matyas\nwww.soundimage.org", fill="white", font=('Times 10'),width=430)
-        self.menu_bar(window)
+        self.menu_bar(window,final_pages)
         #window.mainloop() #basically refreshes the window
 
 
@@ -1063,7 +1224,7 @@ def create_book(title,two,three,frame):
     Book(title,two,three,frame)
 
 music = music_file()
-stories = story_file()
+stories = story_file(book_library)
 soundFiles = sounds_file()
 
 def main():
@@ -1084,3 +1245,8 @@ def main():
     
 if __name__ == "__main__":
     main()
+
+
+
+
+
