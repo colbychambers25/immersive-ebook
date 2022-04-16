@@ -244,8 +244,8 @@ class start_page(tk.Frame):
         logo_label.image = logo
         logo_label.place(relx=.55, rely=.4, anchor= CENTER)
         # end of main logo creation, implementation, placing into frame
-
-        instructions = Button(self, text="Click here to begin!", font=("Raleway", 32), command=lambda: controller.show_frame(main_menu), borderwidth=0)
+        
+        instructions = customtkinter.CTkButton(self, text="Click here to begin!", text_font=("Raleway", 32), command=lambda: controller.show_frame(main_menu), corner_radius=3)
         instructions.place(relx=.55,rely=.95, anchor= S)
         
 
@@ -599,7 +599,7 @@ class library_page(tk.Frame):
         back_arrow_img = back_arrow_img.subsample(15)
 
         refresh_img = PhotoImage(file="ereadpngs/free-refresh-icon-3104-thumb.png")
-        refresh_img = refresh_img.subsample(15)
+
 
         back_arrow = customtkinter.CTkButton(
         library_header,
